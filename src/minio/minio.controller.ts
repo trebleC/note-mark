@@ -1,7 +1,7 @@
 import { Controller, Post, UploadedFile, UseInterceptors, Body } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MinioService } from './minio.service';
-import { DefaultErrorFilter } from 'src/filter/default.filter';
+import { DefaultErrorFilter } from 'src/filters/default.filter';
 
 @Controller('files')
 export class MinioController {

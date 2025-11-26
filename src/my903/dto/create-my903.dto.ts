@@ -4,7 +4,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 /**
  * 媒体资源信息（封面图等）
  */
-class MediaDto {
+class MediaDTO {
   @ApiProperty({ description: '媒体ID', example: 16675 })
   @IsNumber()
   media_id: number;
@@ -26,7 +26,7 @@ class MediaDto {
 /**
  * 歌曲详情信息
  */
-class SongItemDto {
+class SongItemDTO {
   @ApiProperty({ description: '歌曲ID', example: 11718 })
   @IsNumber()
   id: number;
@@ -73,7 +73,7 @@ class SongItemDto {
 /**
  * 栏目信息
  */
-class ArticleColumnDto {
+class ArticleColumnDTO {
   @ApiProperty({ description: '栏目ID', example: 9 })
   @IsNumber()
   article_column_id: number;
@@ -92,7 +92,7 @@ class ArticleColumnDto {
 
   @ApiProperty({ description: '栏目缩略图' })
   @IsObject()
-  thumbnail: MediaDto;
+  thumbnail: MediaDTO;
 
   @ApiProperty({ description: '父栏目ID', example: 2 })
   @IsNumber()
@@ -102,7 +102,7 @@ class ArticleColumnDto {
 /**
  * 元数据信息（SEO相关）
  */
-class MetaDto {
+class MetaDTO {
   @ApiProperty({ description: '页面标题', example: '黃妍 - 叫吧！大笨蛋（社恐版）｜派台歌｜my903.com' })
   @IsString()
   title: string;
@@ -120,12 +120,17 @@ class MetaDto {
 /**
  * 创建My903音乐内容的DTO
  */
-export class CreateMy903Dto {
-  @ApiProperty({ description: '文章ID', example: 5383 })
+export class CreateMy903DTO {
+  @ApiProperty({ description: '稿件ID', example: 5383 })
   @IsNumber()
   article_id: number;
 
-  @ApiProperty({ description: '文章类型（2表示歌曲详情）', example: 2 })
+  @ApiProperty({ description: '文章ID', example: 5383 })
+  @IsOptional()
+  @IsNumber()
+  item_id?: number;
+
+  @ApiProperty({ description: '稿件类型（2表示歌曲详情）', example: 2 })
   @IsNumber()
   article_type: number;
 
@@ -196,7 +201,7 @@ export class CreateMy903Dto {
 
   @ApiProperty({ description: '高亮媒体信息' })
   @IsObject()
-  highlight_media: MediaDto;
+  highlight_media: MediaDTO;
 
   @ApiProperty({ description: '内容详情（包含简介和歌词）', example: '黃妍 - 叫吧！大笨蛋（社恐版） 叫吧！大笨蛋（社恐版）...' })
   @IsString()
@@ -204,7 +209,7 @@ export class CreateMy903Dto {
 
   @ApiProperty({ description: '歌曲详情信息' })
   @IsObject()
-  song_item: SongItemDto;
+  song_item: SongItemDTO;
 
   @ApiProperty({ description: '标签列表', example: ['my903', '派台歌', '黃妍'] })
   @IsArray()
@@ -214,18 +219,18 @@ export class CreateMy903Dto {
 
   @ApiProperty({ description: '缩略图信息' })
   @IsObject()
-  thumbnail: Omit<MediaDto, 'media_id' | 'media_type'>; // 缩略图无需媒体ID和类型
+  thumbnail: Omit<MediaDTO, 'media_id' | 'media_type'>; // 缩略图无需媒体ID和类型
 
-  @ApiPropertyOptional({ description: '相关文章列表', example: [] })
+  @ApiPropertyOptional({ description: '相关稿件列表', example: [] })
   @IsOptional()
   @IsArray()
   related_articles?: any[]; // 可根据实际结构细化
 
   @ApiProperty({ description: '所属栏目信息' })
   @IsObject()
-  article_column: ArticleColumnDto;
+  article_column: ArticleColumnDTO;
 
   @ApiProperty({ description: '元数据（SEO相关）' })
   @IsObject()
-  meta: MetaDto;
+  meta: MetaDTO;
 }

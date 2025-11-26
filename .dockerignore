@@ -1,0 +1,52 @@
+# 依赖
+node_modules
+npm-debug.log
+pnpm-debug.log
+
+# 测试
+coverage
+.nyc_output
+test
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Git
+.git
+.gitignore
+
+# 环境变量（镜像中不应包含本地env）
+.env
+.env.local
+.env.*.local
+
+# 构建输出
+dist
+build
+
+# 临时文件
+*.log
+logs
+*.pid
+*.seed
+*.pid.lock
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# 文档
+README.md
+*.md
+
+# CI/CD
+.github
+.gitlab-ci.yml

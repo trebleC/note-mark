@@ -1,26 +1,31 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import * as Minio from 'minio';
 import { createHash } from 'crypto';
-import { DefaultErrorFilter } from '../filter/default.filter';
+import { DefaultErrorFilter } from '../filters/default.filter';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises'; // 用于安全处理流管道
+import {batchHandler} from '../utils/batch.util'
 @Injectable()
 export class MinioService {
   private minioClient: Minio.Client;
-  private bucketName = 'my903'; // 存储用户头像的桶
+  private bucketName: string; // 存储桶名称（从环境变量读取）
   // 可选：限制并发数，避免过多同时请求导致的问题
    private readonly concurrencyLimit: number = 5
 
-  constructor() {
-    // 初始化 MinIO 客户端
+  constructor(private readonly configService: ConfigService) {
+    // 初始化 MinIO 客户端（从环境变量读取配置）
     this.minioClient = new Minio.Client({
-      endPoint: 'localhost',
-      port: 9000,
-      useSSL: false,
-      accessKey: 'admin', // 对应 MinIO 启动时的 MINIO_ROOT_USER
-      secretKey: '12345678', // 对应 MINIO_ROOT_PASSWORD
+      endPoint: this.configService.get<string>('MINIO_ENDPOINT', 'localhost'),
+      port: parseInt(this.configService.get<string>('MINIO_PORT', '9000'), 10),
+      useSSL: this.configService.get<string>('MINIO_USE_SSL', 'false') === 'true',
+      accessKey: this.configService.get<string>('MINIO_ACCESS_KEY', 'admin'),
+      secretKey: this.configService.get<string>('MINIO_SECRET_KEY', '12345678'),
     });
+
+    // 从环境变量读取桶名称
+    this.bucketName = this.configService.get<string>('MINIO_BUCKET_NAME', 'my903');
 
     // 确保桶存在（不存在则创建）
     this.initBucket();
@@ -134,37 +139,39 @@ export class MinioService {
    * @returns 每个URL对应的MinIO存储路径列表（与输入顺序一致）
    */
   async batchUploadByUrls(urls: string[]): Promise<string[]> {
-    if (!urls || urls.length === 0) {
-      return [];
-    }
 
-    // 使用并发控制处理批量上传，避免同时发起过多请求
-    const results: string[] = new Array(urls.length);
-    const chunks: string[][] = [];
+    return await batchHandler(urls,this.uploadByUrl)
+    // if (!urls || urls.length === 0) {
+    //   return [];
+    // }
 
-    // 将URL列表分块，每块大小为concurrencyLimit
-    for (let i = 0; i < urls.length; i += this.concurrencyLimit) {
-      chunks.push(urls.slice(i, i + this.concurrencyLimit));
-    }
+    // // 使用并发控制处理批量上传，避免同时发起过多请求
+    // const results: string[] = new Array(urls.length);
+    // const chunks: string[][] = [];
 
-    // 按块处理，每块内部并发执行
-    for (const [chunkIndex, chunk] of chunks.entries()) {
-      const chunkResults = await Promise.all(
-        chunk.map(async (url, index) => {
-          const result = await this.uploadByUrl(url);
-          // 计算原始索引位置，确保结果顺序与输入一致
-          const originalIndex = chunkIndex * this.concurrencyLimit + index;
-          return { originalIndex, result };
-        })
-      );
+    // // 将URL列表分块，每块大小为concurrencyLimit
+    // for (let i = 0; i < urls.length; i += this.concurrencyLimit) {
+    //   chunks.push(urls.slice(i, i + this.concurrencyLimit));
+    // }
 
-      // 将结果按原始顺序存入数组
-      chunkResults.forEach(({ originalIndex, result }) => {
-        results[originalIndex] = result;
-      });
-    }
+    // // 按块处理，每块内部并发执行
+    // for (const [chunkIndex, chunk] of chunks.entries()) {
+    //   const chunkResults = await Promise.all(
+    //     chunk.map(async (url, index) => {
+    //       const result = await this.uploadByUrl(url);
+    //       // 计算原始索引位置，确保结果顺序与输入一致
+    //       const originalIndex = chunkIndex * this.concurrencyLimit + index;
+    //       return { originalIndex, result };
+    //     })
+    //   );
 
-    return results;
+    //   // 将结果按原始顺序存入数组
+    //   chunkResults.forEach(({ originalIndex, result }) => {
+    //     results[originalIndex] = result;
+    //   });
+    // }
+
+    // return results;
   }
 
 

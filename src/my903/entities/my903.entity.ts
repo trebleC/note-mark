@@ -116,6 +116,9 @@ export class My903 {
   @Prop({ type: Number, required: true, unique: true, index: true })
   article_id: number;
 
+  @Prop({ type: String })
+  cover: string;
+
   @Prop({ type: Number, required: true, index: true })
   article_type: number;
 
@@ -169,6 +172,9 @@ export class My903 {
 
   @Prop({ type: String, required: true })
   content: string;
+
+  @Prop({ type: String })
+  desc: string;
 
   @Prop({ type: SongItem, required: true })
   song_item: SongItem;
