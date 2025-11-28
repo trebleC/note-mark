@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import axios from 'axios';
+import axios from '../config/axios.config'; // 使用配置好的 axios
 import * as Minio from 'minio';
 import { createHash } from 'crypto';
 import { Readable } from 'stream';

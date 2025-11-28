@@ -5,7 +5,7 @@ import { Model, mongo } from 'mongoose';
 import { My903, My903Document } from './entities/my903.entity';
 import { My903SyncInfo, My903SyncInfoDocument } from './entities/my903-sync-info.entity';
 import { CreateMy903DTO } from './dto/create-my903.dto';
-import axios from 'axios';
+import axios from '../config/axios.config'; // 使用配置好的 axios
 import { batchHandler } from '../utils/batch.util';
 import { MinioService } from 'src/minio/minio.service';
 import dayjs from 'dayjs';
