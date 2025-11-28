@@ -1,4 +1,4 @@
-import { ExceptionFilter, Catch, ArgumentsHost, Logger } from '@nestjs/common';
+import { ExceptionFilter, Catch, ArgumentsHost, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { Request, Response } from 'express';
 
 // 假设的错误码和消息常量（可根据实际项目定义）
@@ -25,41 +25,71 @@ interface ErrorCode {
 export class DefaultErrorFilter implements ExceptionFilter {
   private readonly logger = new Logger(DefaultErrorFilter.name); // 日志实例
 
-  // 错误码和消息的默认值
-  private defaultCode: number;
-  private defaultMessage: string;
-
-  constructor(
-    defaultMessage: string = MESSAGES.ERROR,
-    defaultCode: number = CODES.ERROR,
-  ) {
-    this.defaultCode = defaultCode;
-    this.defaultMessage = defaultMessage;
-  }
-
   // 实现 ExceptionFilter 接口的 catch 方法
-  catch(err: ErrorCode, host: ArgumentsHost) {
+  catch(exception: any, host: ArgumentsHost) {
     // 获取请求上下文（以 Express 为例）
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    // 记录错误日志（包含请求信息和错误详情）
+    // 判断异常类型并提取信息
+    let status: number;
+    let message: string;
+    let error: string;
+    let details: any;
+
+    if (exception instanceof HttpException) {
+      // NestJS 标准异常
+      status = exception.getStatus();
+      const exceptionResponse = exception.getResponse();
+      
+      if (typeof exceptionResponse === 'string') {
+        message = exceptionResponse;
+        error = exception.name;
+      } else if (typeof exceptionResponse === 'object') {
+        const responseObj = exceptionResponse as any;
+        message = responseObj.message || exception.message;
+        error = responseObj.error || exception.name;
+        details = responseObj.details;
+      }
+    } else if (exception instanceof Error) {
+      // 普通 Error 对象
+      status = HttpStatus.INTERNAL_SERVER_ERROR;
+      message = exception.message || '服务器内部错误';
+      error = exception.name || 'Error';
+    } else {
+      // 其他类型异常
+      status = HttpStatus.INTERNAL_SERVER_ERROR;
+      message = String(exception) || '未知错误';
+      error = 'UnknownError';
+    }
+
+    // 记录详细错误日志
     this.logger.error(
-      `[${request.method}] ${request.url} -> 错误: ${err.message || '未知错误'}`,
-      err.stack || '无堆栈信息', // 打印错误堆栈，便于调试
+      `[${request.method}] ${request.url} -> ${error}: ${message}`,
+      exception?.stack || '无堆栈信息',
     );
 
-    // 提取错误码和消息（优先使用 err 自身的属性，否则用默认值）
-    const code = err.code || this.defaultCode;
-    const message = err.message || this.defaultMessage;
+    // 构建响应体
+    const errorResponse: any = {
+      statusCode: status,
+      error,
+      message,
+      path: request.url,
+      timestamp: new Date().toISOString(),
+    };
+
+    // 如果有额外详情，添加到响应中
+    if (details) {
+      errorResponse.details = details;
+    }
+
+    // 开发环境下返回完整堆栈信息
+    if (process.env.NODE_ENV !== 'production' && exception?.stack) {
+      errorResponse.stack = exception.stack;
+    }
 
     // 统一返回格式
-    response.status(code).json({
-      code,
-      message,
-      // path: request.url, // 请求路径
-      // timestamp: new Date().toISOString(), // 时间戳
-    });
+    response.status(status).json(errorResponse);
   }
 }

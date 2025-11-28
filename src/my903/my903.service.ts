@@ -153,6 +153,7 @@ export class My903Service {
       return res || [];
 
     } catch (error) {
+      console.error('获取最新内容失败:', error);
       throw new DefaultErrorFilter('获取最新内容失败', 500);
     }
   }

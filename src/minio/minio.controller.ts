@@ -18,6 +18,7 @@ export class MinioController {
         data: fileUrl
       };
     } catch (error) {
+      console.error('获取最新内容失败:', error);
       throw new DefaultErrorFilter('上传封面图片失败', 500); 
     }
   }

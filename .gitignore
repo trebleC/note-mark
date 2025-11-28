@@ -41,6 +41,10 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 .env.local
+.env.production
+
+# 部署文件夹（包含敏感配置和部署脚本）
+/deploy
 
 # temp directory
 .temp

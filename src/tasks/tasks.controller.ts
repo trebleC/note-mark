@@ -10,7 +10,7 @@ export class TasksController {
   private readonly my903Service: My903Service;
 
   @Get('fetchNew')
-  fetchNew() {
-    return this.my903Service.fetchNew('9');
+  async fetchNew() {
+    return await this.my903Service.fetchNew('9');
   }
 }
