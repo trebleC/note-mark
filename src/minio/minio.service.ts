@@ -63,15 +63,37 @@ export class MinioService {
   }
 
   async uploadByUrl(url: string): Promise<string> {
+    console.log(`[MinIO] 开始上传: ${url}`);
+    
     // 1. 初始化MD5哈希（用于生成唯一文件名）
     const md5Hash = createHash('md5');
     let contentLength = 0; // 记录文件总大小
 
     try {
+      // 测试 MinIO 连接
+      try {
+        const bucketExists = await this.minioClient.bucketExists(this.bucketName);
+        console.log(`[MinIO] Bucket "${this.bucketName}" 存在: ${bucketExists}`);
+        if (!bucketExists) {
+          console.log(`[MinIO] 创建 Bucket: ${this.bucketName}`);
+          await this.minioClient.makeBucket(this.bucketName, 'us-east-1');
+        }
+      } catch (minioError) {
+        console.error('[MinIO] 连接错误:', {
+          message: minioError.message,
+          code: minioError.code,
+          endpoint: this.configService.get('MINIO_ENDPOINT'),
+          port: this.configService.get('MINIO_PORT')
+        });
+        throw new Error(`MinIO 连接失败: ${minioError.message}`);
+      }
+
       // 2. 获取源文件流（responseType: 'stream' 确保返回可读流）
+      console.log(`[MinIO] 下载源文件: ${url}`);
       const { data: sourceStream } = await axios.get(url, {
         responseType: 'stream',
-        headers: { 'User-Agent': 'MinIO Uploader' } // 避免部分服务器拒绝无标识请求
+        headers: { 'User-Agent': 'MinIO Uploader' },
+        timeout: 30000 // 30秒超时
       });
 
       // 3. 创建中转流（用于同时处理MD5计算和上传）
@@ -82,15 +104,17 @@ export class MinioService {
       // 4. 处理源数据流：分块计算MD5和文件大小
       sourceStream
         .on('data', (chunk: Buffer) => {
-          md5Hash.update(chunk); // 累加计算MD5
-          contentLength += chunk.length; // 累加文件大小
-          transformStream.push(chunk); // 将数据推送到中转流（供上传使用）
+          md5Hash.update(chunk);
+          contentLength += chunk.length;
+          transformStream.push(chunk);
         })
         .on('end', () => {
-          transformStream.push(null); // 源数据结束，标记中转流结束
+          transformStream.push(null);
+          console.log(`[MinIO] 文件下载完成, 大小: ${contentLength} bytes`);
         })
         .on('error', (error) => {
-          transformStream.destroy(error); // 源流错误时销毁中转流
+          console.error('[MinIO] 源流错误:', error);
+          transformStream.destroy(error);
         });
 
       // 5. 等待流处理完成（确保MD5计算完整）
@@ -103,8 +127,10 @@ export class MinioService {
       const fileExt = this.getFileExtension(url);
       const md5Hex = md5Hash.digest('hex');
       const objectName = fileExt ? `${md5Hex}.${fileExt}` : md5Hex;
+      console.log(`[MinIO] 生成文件名: ${objectName}`);
 
       // 7. 上传到MinIO（使用流管道，内存友好）
+      console.log(`[MinIO] 开始上传到 MinIO...`);
       await pipeline(
         transformStream, // 从中转流读取数据
         async (source: Readable) => {
@@ -118,15 +144,27 @@ export class MinioService {
         }
       );
 
+      console.log(`[MinIO] 上传成功: /${this.bucketName}/${objectName}`);
+      
       // 8. 返回MinIO中的文件路径
       return `/${this.bucketName}/${objectName}`;
 
     } catch (error) {
       // 9. 规范错误处理（区分错误类型）
+      console.error('[MinIO] uploadByUrl 错误:', {
+        url,
+        message: error.message,
+        code: error.code,
+        response: error.response?.data,
+        stack: error.stack
+      });
+      
       if (error.response?.status === 404) {
         throw new NotFoundException(`源文件不存在: ${url}`);
       } else if (error.code === 'ENOTFOUND') {
         throw new NotFoundException(`无法连接到源服务器: ${url}`);
+      } else if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
+        throw new Error(`请求超时: ${url}`);
       } else {
         throw new Error(`上传失败: ${error.message || '未知错误'}`);
       }
