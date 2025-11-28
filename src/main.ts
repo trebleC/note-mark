@@ -3,10 +3,14 @@ import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { DefaultErrorFilter } from './filters/default.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { FileLogger } from './common/logger/file-logger.service';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule,{
-    logger: ['error', 'warn', 'log', 'debug'], // 设置日志级别
+  // 创建文件日志实例
+  const fileLogger = new FileLogger();
+  
+  const app = await NestFactory.create(AppModule, {
+    logger: fileLogger, // 使用自定义文件日志
   });
   
   // 应用全局响应拦截器
