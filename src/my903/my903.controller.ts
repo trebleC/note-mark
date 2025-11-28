@@ -1,10 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Inject, HttpException, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { My903Service } from './my903.service';
 import { CreateMy903DTO } from './dto/create-my903.dto';
 import { My903 } from './entities/my903.entity';
 import { MinioService } from 'src/minio/minio.service';
-import { DefaultErrorFilter } from 'src/filters/default.filter';
 import { MiddlewareBuilder } from '@nestjs/core';
 import { ResponseDto } from 'src/common/dto/response.dto';
 
@@ -67,7 +66,11 @@ export class My903Controller {
       const data = await this.my903Service.fetchNew(id, limit);
       return ResponseDto.success(data, '最新内容已成功抓取并保存');
     } catch (error) {
-      throw new DefaultErrorFilter('获取最新内容失败', 500);
+      console.error('[My903Controller] fetchNew 错误:', error);
+      throw new HttpException(
+        `获取最新内容失败: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
     }
   }
 

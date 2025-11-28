@@ -1,7 +1,6 @@
-import { Controller, Post, UploadedFile, UseInterceptors, Body } from '@nestjs/common';
+import { Controller, Post, UploadedFile, UseInterceptors, Body, HttpException, HttpStatus } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MinioService } from './minio.service';
-import { DefaultErrorFilter } from 'src/filters/default.filter';
 
 @Controller('files')
 export class MinioController {
@@ -18,8 +17,15 @@ export class MinioController {
         data: fileUrl
       };
     } catch (error) {
-      console.error('获取最新内容失败:', error);
-      throw new DefaultErrorFilter('上传封面图片失败', 500); 
+      console.error('[MinioController] uploadByUrl 错误:', {
+        message: error.message,
+        url: body.url,
+        stack: error.stack
+      });
+      throw new HttpException(
+        `上传封面图片失败: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
     }
   }
 

@@ -3,7 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import * as Minio from 'minio';
 import { createHash } from 'crypto';
-import { DefaultErrorFilter } from '../filters/default.filter';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises'; // 用于安全处理流管道
 import {batchHandler} from '../utils/batch.util'

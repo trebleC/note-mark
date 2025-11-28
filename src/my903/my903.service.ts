@@ -5,7 +5,6 @@ import { Model, mongo } from 'mongoose';
 import { My903, My903Document } from './entities/my903.entity';
 import { My903SyncInfo, My903SyncInfoDocument } from './entities/my903-sync-info.entity';
 import { CreateMy903DTO } from './dto/create-my903.dto';
-import { DefaultErrorFilter } from 'src/filters/default.filter';
 import axios from 'axios';
 import { batchHandler } from '../utils/batch.util';
 import { MinioService } from 'src/minio/minio.service';
@@ -45,7 +44,7 @@ export class My903Service {
     ).exec();
 
     if (!result) {
-      throw new DefaultErrorFilter('数据创建/更新失败', 500);
+      throw new InternalServerErrorException('数据创建/更新失败');
     }
 
     return result;
