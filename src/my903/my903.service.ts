@@ -153,51 +153,64 @@ export class My903Service {
       return res || [];
 
     } catch (error) {
-      console.error('获取最新内容失败:', error);
-      throw new DefaultErrorFilter('获取最新内容失败', 500);
+      console.error('[My903Service] fetchNew 错误:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        stack: error.stack
+      });
+      throw new Error(`获取最新内容失败: ${error.message || '未知错误'}`);
     }
   }
 
 
   async batchCreate(items: CreateMy903DTO[]) {
-    //请求获取稿件的详情
-    const urlResult = await batchHandler(items, async (obj) => {
-      return await this.findDetail(obj.item_id)
-    })
+    try {
+      //请求获取稿件的详情
+      const urlResult = await batchHandler(items, async (obj) => {
+        return await this.findDetail(obj.item_id)
+      })
 
 
-    // 遍历列表，处理每个元素的封面上传
-    const processedItems = await Promise.all(
-      urlResult.map(async (item) => {
-        // 1. 上传封面到MinIO
-        const coverUrl = await this.minioService.uploadByUrl(item.thumbnail.src);
+      // 遍历列表，处理每个元素的封面上传
+      const processedItems = await Promise.all(
+        urlResult.map(async (item) => {
+          // 1. 上传封面到MinIO
+          const coverUrl = await this.minioService.uploadByUrl(item.thumbnail.src);
 
-        // 2. 提取【歌曲簡介】到【歌詞】之间的内容
-        let extractedContent = item.content;
-        if (item.content) {
-          const startMarker = '【歌曲簡介】';
-          const endMarker = '【歌詞】';
-          const startIndex = item.content.indexOf(startMarker);
-          const endIndex = item.content.indexOf(endMarker);
+          // 2. 提取【歌曲簡介】到【歌詞】之间的内容
+          let extractedContent = item.content;
+          if (item.content) {
+            const startMarker = '【歌曲簡介】';
+            const endMarker = '【歌詞】';
+            const startIndex = item.content.indexOf(startMarker);
+            const endIndex = item.content.indexOf(endMarker);
 
-          if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
-            // 提取两个标记之间的内容（包含起始标记，不包含结束标记）
-            extractedContent = item.content.substring(startIndex + startMarker.length, endIndex);
+            if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+              // 提取两个标记之间的内容（包含起始标记，不包含结束标记）
+              extractedContent = item.content.substring(startIndex + startMarker.length, endIndex);
+            }
           }
-        }
 
-        // 3. 更新DTO中的字段
-        return {
-          ...item,
-          cover: coverUrl, // 覆盖原封面地址为MinIO地址
-          content: extractedContent, // 使用提取后的内容
-        };
-      }),
-    );
+          // 3. 更新DTO中的字段
+          return {
+            ...item,
+            cover: coverUrl, // 覆盖原封面地址为MinIO地址
+            content: extractedContent, // 使用提取后的内容
+          };
+        }),
+      );
 
-    // 3. 批量创建/更新（如果服务端支持批量操作）
-    return this.batchCreateOrUpdate(processedItems);
-
+      // 3. 批量创建/更新（如果服务端支持批量操作）
+      return this.batchCreateOrUpdate(processedItems);
+    } catch (error) {
+      console.error('[My903Service] batchCreate 错误:', {
+        message: error.message,
+        itemCount: items?.length,
+        stack: error.stack
+      });
+      throw new Error(`批量创建失败: ${error.message}`);
+    }
   }
 
   /**

@@ -11,6 +11,15 @@ export class TasksController {
 
   @Get('fetchNew')
   async fetchNew() {
-    return await this.my903Service.fetchNew('9');
+    try {
+      return await this.my903Service.fetchNew('9');
+    } catch (error) {
+      console.error('[TasksController] fetchNew 错误:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+      throw error;
+    }
   }
 }
